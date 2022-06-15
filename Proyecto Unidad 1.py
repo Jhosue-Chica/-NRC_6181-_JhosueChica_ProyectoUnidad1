@@ -21,7 +21,6 @@ from dateutil.relativedelta import relativedelta as rd, FR
 from holidays.constants import JAN, MAY, AUG, OCT, NOV, DEC
 from holidays.holiday_base import HolidayBase
 
-
 class FeriadoEcuador(HolidayBase):
     """
     Una clase que representa las vacaciones en Ecuador por provincia (FeriadoEcuador)
@@ -201,36 +200,6 @@ def Menu():
             print("Gracias por visitarnos :)")
             break
 
-'''def MenuUsuario():
-    
-    Para la creascion del menu principal se hace la utiliza de un bucle While 
-    con condicion de True la cual pobroca bucle infinito, en el cual si ingresa
-    una opcion mal siguira pidiendo el dato hasta que ingrese uno correcto.
-    1. como primera opcion se ingresa a la opcion de compras de la aplicacion delibery
-    2. como segunda opcion se ingresa a la opcion de pagos de la aplicacion delibery
-    3. como tercera opcion se ejecuta un break y se regresa al menu principal
-    
-    while(True): # bucle infinito mientras que el valor de la condicion devuelva false
-        print("==============================================")
-        print("||        BIENVENIDO A EASY SERVICE         ||")
-        print("||==========================================||")
-        print("|| 1.- MENU DE COMPRAS                      ||")
-        print("|| 2.- MENU DE PAGOS                        ||")
-        print("|| 3.- SALIR DE SESION                      ||")
-        print("==============================================")
-        opcion=int(input("Bienvenido, ¿Qué desea realizar el dia de hoy?: "))
-        if(opcion == 1):
-            usuario1.MenuCompras() #Llamada al metodo de Menu Compras
-        elif(opcion == 2):
-            # como segunda opcion se llama al metodo de iniciar sesion,
-            # para despues continuar con el menu de pedidos
-            usuario1.MetodoPago()
-            ''''''
-        elif(opcion == 3):
-            # como tercera opcion se ejecuta un break y se cierra el programa
-            break
-''' 
-
 class Cliente():
     ''' 
     Clase en donde se guardaran todos los datos que ingresa el 
@@ -320,17 +289,27 @@ class MenuPedidos():
     Atributos
     ----------
     Carrito : int
-        
+    
+    cantidadCompras
+    
     menuPrincipal : list
-        Se encuentran registrados todos los alimentos que se tiene 
-        disponibles dentro del app de delibery
+        Se encuentran registrados en una lista todos los alimentos 
+        que se tiene disponibles dentro del app de delibery
+    precios : list
+        Se encuentran registrados en una lista los precios de todos los 
+        alimentos que se tiene disponibles dentro del app de delibery
     ...
     Metodos
     -------
     _init_(self):
         Construye todos los atributos necesarios para el objeto Empleado.
     MenuCompras(self):
-        Se muestrra el nombre, el salario y el correo del empleado
+        Menu en donde se encuentran registrados los detalles de los productos
+        y donde se pueden llamar a metodos para revisan y pagar por los productos
+        agregados al carrito de compras
+    Ordenamiento(self, numeroCompra, precioProducto):
+        Realiza la confirmacion y añade al carrito la cantidad de compras
+        especificada por el usuario
     ''' 
     def __init__(self):
         ''' 
@@ -351,6 +330,11 @@ class MenuPedidos():
         self.precios=["2.00","2.00","2.00","2.50","3.00","3.00","4.00","2.50","5.00"]
 
     def MenuCompras(self):
+        ''' 
+        Menu en donde se encuentran registrados los detalles de los productos
+        y donde se pueden llamar a metodos para revisan y pagar por los productos
+        agregados al carrito de compras
+        '''
         while(True):
             print("===================================================================")
             print("||                       MENU DE COMPRAS                         ||")
@@ -391,6 +375,10 @@ class MenuPedidos():
             elif(opcion == 12):
                 break
     def Ordenamiento(self, numeroCompra, precioProducto):
+        ''' 
+        Realiza la confirmacion y añade al carrito la cantidad de compras
+        especificada por el usuario
+        '''
         print(self.menuPrincipal[numeroCompra-1])
         while(True):
             confirmacion=str(input("Desea ordenar (si/no): " ))
@@ -401,7 +389,8 @@ class MenuPedidos():
                     if cantidad<=0:
                         print("Valor no valido, la clave ingresada es incorrecto")
                     else: break
-                self.Carrito=cantidad*precioProducto
+                subprecio=cantidad*precioProducto
+                self.Carrito+=subprecio
                 print("Su cuenta Es hora es de: ",self.Carrito)
                 self.cantidadCompras[numeroCompra-1]+=cantidad
                 break
@@ -419,6 +408,8 @@ class PagoPedidos(MenuPedidos):
     ...
     Atributos
     ----------
+    total : int
+        La cantidad total de las compras a pagar, despues de aplicar el IVA
     _numTarjeta : int
         El numero de la targeta del usuario registrado al sistema con la
         cual se pagan los pedidos.
@@ -431,21 +422,30 @@ class PagoPedidos(MenuPedidos):
     _init_(self):
         Construye todos los atributos necesarios para el objeto PagoPedidos.
     MetodoPago(self):
-    
+        Se pregunta por que medio desea realizar el el pago de las compras
+    PagoTarjeta(self):
+        Se especifican los detalles necesarios para poder realizar un pago con targeta
     PagoTotal(self):
-        
+        Se construye la factura con los vslores de las compras, el subtotal, IVA y 
+        el total de la compra registrada
     ''' 
     def __init__(self):
         ''' 
         Construye todos los atributos necesarios para el objeto PagoPedidos.
         '''
-        self.subTotal=0
+        self.total=0
         # atributo privado
         self.__numTarjeta = 0
         self.__claveTarjeta = 0
+        '''
+        Se llama al constructor de la clase MenuPedidos
+        '''
         MenuPedidos.__init__(self)
     
     def MetodoPago(self):
+        '''
+        Se pregunta por que medio desea realizar el pago de las compras
+        '''
         while(True):
             print("==============================================")
             print("||             METODO DE PAGO               ||")
@@ -456,7 +456,7 @@ class PagoPedidos(MenuPedidos):
             print("==============================================")
             opcionPago=int(input("¿Por cual metodo de pago desea seguir?: " ))
             if opcionPago==1:
-                usuario1.TipoPago()
+                usuario1.PagoTarjeta()
                 usuario1.PagoTotal()
                 break
             elif opcionPago==2:
@@ -467,43 +467,50 @@ class PagoPedidos(MenuPedidos):
             else:
                 print("Opcion incorrecta, ingrese nuevamente")
 
-    def TipoPago(self):
+    def PagoTarjeta(self):
+        '''
+        Se especifican los detalles necesarios para poder realizar un pago con targeta
+        '''
         while True:
-            self._numTarjeta=int(input("Ingrese el numero de su targeta de credito: " ))
-            if self.__numTarjeta<10 and self.__numTarjeta>10:
+            self.__numTarjeta=int(input("Ingrese el numero de su targeta de credito: " ))
+            if (len(str(self.__numTarjeta))>9 and len(str(self.__numTarjeta))<=10):
+                break
+            else:
                 print("Valor no valido, el numero de targeta ingresado es incorrecto")
-            else:
-                break
+                
         while True:
-            self._claveTarjeta=int(input("Ingrese la fecha de vencimiento de su targeta de credito: " ))
-            if self.__claveTarjeta<3 and self.__claveTarjeta>3:
-                print("Valor no valido, la clave ingresada es incorrecto")
-            else:
+            self.__claveTarjeta=int(input("Ingrese la fecha de vencimiento de su targeta de credito: " ))
+            if (len(str(self.__claveTarjeta))>2 and len(str(self.__claveTarjeta))<=3):
                 break
+            else:
+                print("Valor no valido, la clave ingresada es incorrecto")
     
     def PagoTotal(self):
         '''
+        Se construye la factura con los vslores de las compras, el subtotal, IVA y 
+        el total de la compra registrada
         '''
-        
         print("=============================================")
         print("||           FACTURA EASY SERVICE          ||")
         print("||-----------------------------------------||")
         print("|| CLIENTE:",cliente1.apellido,cliente1.nombre)
-        print("|| CEDULA: ",cliente1.cedula,"                   ||")
+        print("|| CEDULA: ",cliente1.cedula,"                    ||")
         print("||-----------------------------------------||")
         print("|| CANTIDAD  PRECIO    PEDIDO              ||")
         for i in range (0,10):
             if (self.cantidadCompras[i]>0):
                 precioEspecifico=self.cantidadCompras[i]*float(self.precios[i])
-                self.subTotal+=precioEspecifico
                 print("||   ",self.cantidadCompras[i],"     $",precioEspecifico,"   ",self.menuPrincipal[i])
-        
-        print("|| SUBTOTAL ",self.subTotal,"                          ||")
-        
-        print("||                                         ||")
+        iva=self.Carrito*0.12
+        self.total=self.Carrito+iva
+        print("||-----------------------------------------||")
+        print("|| SUBTOTAL $",self.Carrito)
+        print("||    IVA   $",iva)
+        print("||   TOTAL  $",self.total)
         print("=============================================")
+        self.Carrito=0
+        self.cantidadCompras=[0,0,0,0,0,0,0,0,0,0]
 
-        
 if __name__ == '__main__':
     cliente1=Cliente() # Instanciar objeto de la clase Cliente
     usuario1=MenuPedidos() # Instanciar objeto de la clase MenuPedidos
