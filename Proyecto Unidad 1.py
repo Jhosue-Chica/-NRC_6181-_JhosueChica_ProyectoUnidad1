@@ -7,168 +7,6 @@ confirmar la transacción y presentar una factura electrónica de su pedido como
 confirmación final de este.
 '''
 
-import datetime 
-import requests
-import os
-import argparse
-import re
-import json
-
-from dateutil.relativedelta import *
-from dateutil.easter import *
-from dateutil.easter import easter
-from dateutil.relativedelta import relativedelta as rd, FR
-from holidays.constants import JAN, MAY, AUG, OCT, NOV, DEC
-from holidays.holiday_base import HolidayBase
-
-class FeriadoEcuador(HolidayBase):
-    """
-    Una clase que representa las vacaciones en Ecuador por provincia (FeriadoEcuador)
-    Su objetivo es determinar si una fecha específica sea un feriado lo más rápido
-    y flexible posible.
-    https://www.turismo.gob.ec/wp-content/uploads/2020/03/CALENDARIO-DE-FERIADOS.pdf
-    ...
-    Atributos (Hereda la clase FeriadoEcuador)
-    ----------
-    prov: str
-        código de provincia según ISO3166-2
-    Metodos
-    -------
-    __init__(self, placa, date, time, online=False):
-        Construye todos los atributos necesarios para el objeto FeriadoEcuador.
-    _populate(self, year):
-        Devuelve si una fecha es festiva o no
-    """     
-    # ISO 3166-2 códigos de las principales subdivisiones, 
-    # llamadas provincias
-    # https://es.wikipedia.org/wiki/ISO_3166-2:EC
-    PROVINCES = ["EC-P"]  # TODO añadir más provincias
-
-    def __init__(self, **kwargs):
-        """
-        Construye todos los atributos necesarios para el objeto FeriadoEcuador.
-        """         
-        self.pais = "ECU"
-        self.prov = kwargs.pop("prov", "ON")
-        HolidayBase.__init__(self, **kwargs)
-
-    def _populate(self, year):
-        """
-        Comprueba si una fecha es festiva o no
-        
-        Parametros
-        ----------
-        year : str
-            year of a date
-        Retorna
-        -------
-        Devuelve True si una fecha es festiva, en caso contrario False 
-        """                    
-        # Año Nuevo
-        self[datetime.date(year, JAN, 1)] = "Año Nuevo [New Year's Day]"
-        
-        # Navidad
-        self[datetime.date(year, DEC, 25)] = "Navidad [Christmas]"
-        
-        # Semana Santa
-        self[easter(year) + rd(weekday=FR(-1))] = "Semana Santa (Viernes Santo) [Good Friday)]"
-        self[easter(year)] = "Día de Pascuas [Easter Day]"
-        
-        # Carnaval
-        total_lent_days = 46
-        self[easter(year) - datetime.timedelta(days=total_lent_days+2)] = "Lunes de carnaval [Carnival of Monday)]"
-        self[easter(year) - datetime.timedelta(days=total_lent_days+1)] = "Martes de carnaval [Tuesday of Carnival)]"
-        
-        # Dia de trabajo
-        name = "Día Nacional del Trabajo [Labour Day]"
-        # (Ley 858/Ley de Reforma a la LOSEP (vigente desde el 21 de diciembre de 2016 /R.O # 906)) Si el feriado cae en 
-        # sábado o martes el descanso obligatorio pasará al viernes o lunes inmediato anterior respectivamente
-        if year > 2015 and datetime.date(year, MAY, 1).weekday() in (5,1):
-            self[datetime.date(year, MAY, 1) - datetime.timedelta(days=1)] = name
-        # (Ley 858/Ley de Reforma a la LOSEP (vigente desde el 21 de diciembre de 2016 /R.O # 906)) 
-        # si el feriado cae en domingo el descanso obligatorio pasará al lunes siguiente
-        elif year > 2015 and datetime.date(year, MAY, 1).weekday() == 6:
-            self[datetime.date(year, MAY, 1) + datetime.timedelta(days=1)] = name
-        # (Ley 858/Ley de Reforma a la LOSEP (vigente desde el 21 de diciembre de 2016 /R.O # 906)) Los feriados que sean
-        # en miércoles o jueves se trasladarán al viernes de esa semana
-        elif year > 2015 and  datetime.date(year, MAY, 1).weekday() in (2,3):
-            self[datetime.date(year, MAY, 1) + rd(weekday=FR)] = name
-        else:
-            self[datetime.date(year, MAY, 1)] = name
-        
-        # Batalla del Pichincha, las reglas son las mismas que las del día del trabajo
-        name = "Batalla del Pichincha [Pichincha Battle]"
-        if year > 2015 and datetime.date(year, MAY, 24).weekday() in (5,1):
-            self[datetime.date(year, MAY, 24).weekday() - datetime.timedelta(days=1)] = name
-        elif year > 2015 and datetime.date(year, MAY, 24).weekday() == 6:
-            self[datetime.date(year, MAY, 24) + datetime.timedelta(days=1)] = name
-        elif year > 2015 and  datetime.date(year, MAY, 24).weekday() in (2,3):
-            self[datetime.date(year, MAY, 24) + rd(weekday=FR)] = name
-        else:
-            self[datetime.date(year, MAY, 24)] = name        
-        
-        # Primer Grito de la Independencia, las reglas son las mismas que las del día del trabajo
-        name = "Primer Grito de la Independencia [First Cry of Independence]"
-        if year > 2015 and datetime.date(year, AUG, 10).weekday() in (5,1):
-            self[datetime.date(year, AUG, 10)- datetime.timedelta(days=1)] = name
-        elif year > 2015 and datetime.date(year, AUG, 10).weekday() == 6:
-            self[datetime.date(year, AUG, 10) + datetime.timedelta(days=1)] = name
-        elif year > 2015 and  datetime.date(year, AUG, 10).weekday() in (2,3):
-            self[datetime.date(year, AUG, 10) + rd(weekday=FR)] = name
-        else:
-            self[datetime.date(year, AUG, 10)] = name       
-        
-        # Independencia de Guayaquil, las reglas son las mismas que las del día del trabajo
-        name = "Independencia de Guayaquil [Guayaquil's Independence]"
-        if year > 2015 and datetime.date(year, OCT, 9).weekday() in (5,1):
-            self[datetime.date(year, OCT, 9) - datetime.timedelta(days=1)] = name
-        elif year > 2015 and datetime.date(year, OCT, 9).weekday() == 6:
-            self[datetime.date(year, OCT, 9) + datetime.timedelta(days=1)] = name
-        elif year > 2015 and  datetime.date(year, MAY, 1).weekday() in (2,3):
-            self[datetime.date(year, OCT, 9) + rd(weekday=FR)] = name
-        else:
-            self[datetime.date(year, OCT, 9)] = name        
-        
-        # Día de los difuntos
-        namedd = "Día de los difuntos [Day of the Dead]" 
-        # Independence of Cuenca
-        nameic = "Independencia de Cuenca [Independence of Cuenca]"
-        # (Ley 858/Ley de Reforma a la LOSEP (vigente desde el 21 de diciembre de 2016 /R.O # 906))
-        # Para los feriados nacionales y/o locales que coincidan en días continuos,
-        # se aplicarán las siguientes reglas:
-        if (datetime.date(year, NOV, 2).weekday() == 5 and  datetime.date(year, NOV, 3).weekday() == 6):
-            self[datetime.date(year, NOV, 2) - datetime.timedelta(days=1)] = namedd
-            self[datetime.date(year, NOV, 3) + datetime.timedelta(days=1)] = nameic     
-        elif (datetime.date(year, NOV, 3).weekday() == 2):
-            self[datetime.date(year, NOV, 2)] = namedd
-            self[datetime.date(year, NOV, 3) - datetime.timedelta(days=2)] = nameic
-        elif (datetime.date(year, NOV, 3).weekday() == 3):
-            self[datetime.date(year, NOV, 3)] = nameic
-            self[datetime.date(year, NOV, 2) + datetime.timedelta(days=2)] = namedd
-        elif (datetime.date(year, NOV, 3).weekday() == 5):
-            self[datetime.date(year, NOV, 2)] =  namedd
-            self[datetime.date(year, NOV, 3) - datetime.timedelta(days=2)] = nameic
-        elif (datetime.date(year, NOV, 3).weekday() == 0):
-            self[datetime.date(year, NOV, 3)] = nameic
-            self[datetime.date(year, NOV, 2) + datetime.timedelta(days=2)] = namedd
-        else:
-            self[datetime.date(year, NOV, 2)] = namedd
-            self[datetime.date(year, NOV, 3)] = nameic  
-            
-        # Fundación de Quito, se aplica sólo a la provincia de Pichincha, 
-        # las reglas son las mismas que las del día del trabajo
-        name = "Fundación de Quito [Foundation of Quito]"        
-        if self.prov in ("EC-P"):
-            if year > 2015 and datetime.date(year, DEC, 6).weekday() in (5,1):
-                self[datetime.date(year, DEC, 6) - datetime.timedelta(days=1)] = name
-            elif year > 2015 and datetime.date(year, DEC, 6).weekday() == 6:
-                self[(datetime.date(year, DEC, 6).weekday()) + datetime.timedelta(days=1)] =name
-            elif year > 2015 and  datetime.date(year, DEC, 6).weekday() in (2,3):
-                self[datetime.date(year, DEC, 6) + rd(weekday=FR)] = name
-            else:
-                self[datetime.date(year, DEC, 6)] = name
-
-
 def Menu():
     '''
     Para la creacion del menu principal se hace la utiliza de un bucle While 
@@ -193,7 +31,7 @@ def Menu():
         elif(opcion == 2):
             # como segunda opcion se llama al metodo de iniciar sesion,
             # para despues continuar con el menu de pedidos
-            #cliente1.iniciarSesion()
+            # cliente1.iniciarSesion()
             usuario1.MenuCompras()
         elif(opcion == 3):
             # como tercera opcion se ejecuta un break y se cierra el programa
@@ -238,7 +76,6 @@ class Cliente():
         ''' 
         Construye todos los atributos necesarios para el objeto Cliente.
         '''
-        # atributos publicos
         # atributo protegido
         self._usuario = "usuario"
         self._clave = "clave"
@@ -251,8 +88,18 @@ class Cliente():
         self.nombre=str(input( "Ingrese su Nombre: " ))
         self.apellido=str(input( "Ingrese su Apellido: " ))
         self.direccion=str(input( "Ingrese su Dirrecion de domicilio: " ))
-        self.telefono=str(input( "Ingrese su Telefono: "))
-        self.cedula=str(input( "Ingrese su Cedula: " ))
+        while True:
+            self.telefono=str(input( "Ingrese su Telefono: "))
+            if (len(self.telefono)==10):
+                break
+            else:
+                print("Valor no valido, el telefono ingresao es incorrecto")
+        while True:
+            self.cedula=str(input( "Ingrese su Cedula: " ))
+            if (len(self.cedula)==10):
+                break
+            else:
+                print("Valor no valido, el telefono ingresao es incorrecto")
         self._usuario=self.nombre+self.apellido+self.cedula[7:]
         self._clave=self.direccion[:3]+self.telefono[6:8]+self.cedula[7:]
         print("================================================================")
@@ -288,7 +135,7 @@ class MenuPedidos():
     ...
     Atributos
     ----------
-    Carrito : int
+    Carrito : float
     
     cantidadCompras
     
@@ -367,9 +214,11 @@ class MenuPedidos():
             elif(opcion == 8):
                 usuario1.Ordenamiento(8,2.5)
             elif(opcion == 9):
-                usuario1.Ordenamiento(9,2.5)
+                usuario1.Ordenamiento(9,5)
             elif(opcion == 10):
-                print(self.cantidadCompras)
+                for i in range (0,10):
+                    if (self.cantidadCompras[i]>0):
+                        print("  ",self.cantidadCompras[i],"   ",self.menuPrincipal[i])
             elif(opcion == 11):
                 usuario1.MetodoPago()
             elif(opcion == 12):
@@ -406,7 +255,7 @@ class PagoPedidos(MenuPedidos):
     todos los pedidos realizados por el cliente al momento de realizar
     su compra.
     ...
-    Atributos
+    Atributos (Hereda la clase MenuPedidos)
     ----------
     total : int
         La cantidad total de las compras a pagar, despues de aplicar el IVA
@@ -516,6 +365,3 @@ if __name__ == '__main__':
     usuario1=MenuPedidos() # Instanciar objeto de la clase MenuPedidos
     usuario1=PagoPedidos() # Instanciar objeto de la clase PagoPedidos
     Menu()
-
-
-
